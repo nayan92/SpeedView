@@ -1,7 +1,10 @@
+ARCHS=armv7 armv7s arm64
 include theos/makefiles/common.mk
 
-TWEAK_NAME = CamerAlertWidget
-CamerAlertWidget_FILES = Tweak.xm
+TWEAK_NAME = SpeedView
+SpeedView_FILES = Tweak.xm
+SpeedView_FRAMEWORKS = UIKit
+SpeedView_LIBRARIES = objcipc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
