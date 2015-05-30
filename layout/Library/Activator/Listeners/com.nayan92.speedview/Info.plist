@@ -1,0 +1,5 @@
+{
+  title = "SpeedView";
+  description = "An awesome floating speedometer!";
+  "compatible-modes" = ("springboard", "application");
+}
