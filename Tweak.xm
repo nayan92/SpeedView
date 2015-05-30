@@ -3,7 +3,9 @@
 
 @interface RootViewController : NSObject {
   double nSpd;
+  float nAvg;
   float UOMfactor;
+  BOOL isInSpecsZone;
 }
 - (void)locationManager:(id)arg1 didUpdateToLocation:(id)arg2 fromLocation:(id)arg3;
 @end
@@ -16,14 +18,19 @@
   %orig;
 
   double hooked_nSpd = MSHookIvar<double>(self, "nSpd");
+  float hooked_nAvg = MSHookIvar<float>(self, "nAvg");
   float hooked_UOMfactor = MSHookIvar<float>(self, "UOMfactor");
+  BOOL hooked_isInSpecsZone = MSHookIvar<BOOL>(self, "isInSpecsZone");
 
   int speed = (int) round(hooked_nSpd * hooked_UOMfactor);
-  NSDictionary *msgDict = @{@"speed" : [NSNumber numberWithInt:speed]};
+  int avgSpeed = (int) round(hooked_nAvg * hooked_UOMfactor);
+  NSDictionary *msgDict = @{@"speed" : [NSNumber numberWithInt:speed],
+                            @"avgSpeed" : [NSNumber numberWithInt:avgSpeed],
+                            @"isInSpecsZone" : [NSNumber numberWithBool:hooked_isInSpecsZone]};
 
   [OBJCIPC sendMessageToSpringBoardWithMessageName:@"com.nayan92.speedview.msg_speedupdate"
                                         dictionary:msgDict
-                                        replyHandler:^(NSDictionary *response) {}];
+                                      replyHandler:^(NSDictionary *response) {}];
 }
 
 %end
@@ -32,6 +39,9 @@
   BOOL visible;
   UIWindow *window;
   UILabel *speedLabel;
+  UILabel *avgSpeedLabel;
+  UIView *separator;
+  BOOL inAveragingView;
 }
 @end
 
@@ -43,13 +53,38 @@
     visible = NO;
   } else {
     if (window == nil)
-      [self displaySpeedometer];
+      [self createWidget];
     window.hidden = NO;
     visible = YES;
   }
 }
 
-- (void)displaySpeedometer {
+- (void)registerForIpcEvents {
+  NSDictionary *(^onCamerAlertUpdate)(NSDictionary *) = ^NSDictionary *(NSDictionary *message) {
+    NSString *speed = [message[@"speed"] stringValue];
+    NSString *avgSpeed = [message[@"avgSpeed"] stringValue];
+    BOOL isInSpecsZone = [message[@"isInSpecsZone"] boolValue];
+
+    speedLabel.text = speed;
+    avgSpeedLabel.text = avgSpeed;
+
+    if (isInSpecsZone && !inAveragingView) {
+      inAveragingView = YES;
+      [self showAveragingView];
+    } else if (!isInSpecsZone && inAveragingView) {
+      inAveragingView = NO;
+      [self showSpeedOnlyView];
+    }
+
+    return nil;
+  };
+
+  [OBJCIPC registerIncomingMessageHandlerForAppWithIdentifier:@"com.pocketgpsworld.CamerAlert"
+                                               andMessageName:@"com.nayan92.speedview.msg_speedupdate"
+                                                      handler:onCamerAlertUpdate];
+}
+
+- (void)createWidget {
   window = [[UIWindow alloc] initWithFrame:CGRectMake(270, 672, 60, 60)];
   window.windowLevel = UIWindowLevelAlert + 2;
   window.layer.cornerRadius = 30;
@@ -59,20 +94,67 @@
   [window setBackgroundColor:[UIColor whiteColor]];
 
   speedLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
-  speedLabel.layer.cornerRadius = 30;
   speedLabel.textAlignment = NSTextAlignmentCenter;
   speedLabel.text = @"N/A";
   [window addSubview:speedLabel];
+
+  avgSpeedLabel = [[UILabel alloc] initWithFrame:CGRectMake(60, 0, 60, 60)];
+  avgSpeedLabel.textAlignment = NSTextAlignmentCenter;
+  avgSpeedLabel.text = @"N/A";
+  avgSpeedLabel.alpha = 0;
+  [window addSubview:avgSpeedLabel];
+
+  separator = [[UIView alloc] initWithFrame:CGRectMake(59, 10, 3, 0)];
+  [separator setBackgroundColor:[UIColor blackColor]];
+  [window addSubview:separator];
 }
 
-- (void)registerForIpcEvents {
-  [OBJCIPC registerIncomingMessageHandlerForAppWithIdentifier:@"com.pocketgpsworld.CamerAlert"
-                                               andMessageName:@"com.nayan92.speedview.msg_speedupdate"
-                                                      handler:^NSDictionary *(NSDictionary *message) {
-                                                        if (speedLabel != nil)
-                                                          speedLabel.text = [message[@"speed"] stringValue];
-                                                        return nil;
-                                                      }];
+- (void)showAveragingView {
+  [UIView animateWithDuration:0.5 animations:^{
+    CGRect windowFrame = window.frame;
+    windowFrame.size.width = 120;
+    window.frame = windowFrame;
+  } completion:^(BOOL finished){
+    [UIView animateWithDuration:0.5 animations:^{
+      avgSpeedLabel.alpha = 1;
+      
+      CGRect separatorFrame = separator.frame;
+      separatorFrame.size.height = 40;
+      separator.frame = separatorFrame;
+    }];
+  }];
+
+  CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"cornerRadius"];
+  animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+  animation.fromValue = @30;
+  animation.toValue = @15;
+  animation.duration = 0.5;
+  [window.layer setCornerRadius:15];
+  [window.layer addAnimation:animation forKey:@"cornerRadius"];
+}
+
+- (void)showSpeedOnlyView {
+  [UIView animateWithDuration:0.5 animations:^{
+    avgSpeedLabel.alpha = 0;
+    
+    CGRect separatorFrame = separator.frame;
+    separatorFrame.size.height = 0;
+    separator.frame = separatorFrame;
+  } completion:^(BOOL finished){
+    [UIView animateWithDuration:0.5 animations:^{
+      CGRect windowFrame = window.frame;
+      windowFrame.size.width = 60;
+      window.frame = windowFrame;
+    }];
+
+    CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"cornerRadius"];
+    animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
+    animation.fromValue = @15;
+    animation.toValue = @30;
+    animation.duration = 0.5;
+    [window.layer setCornerRadius:30];
+    [window.layer addAnimation:animation forKey:@"cornerRadius"];
+  }];
 }
 
 + (void)load {

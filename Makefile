@@ -3,7 +3,7 @@ include theos/makefiles/common.mk
 
 TWEAK_NAME = SpeedView
 SpeedView_FILES = Tweak.xm
-SpeedView_FRAMEWORKS = UIKit
+SpeedView_FRAMEWORKS = UIKit QuartzCore
 SpeedView_LIBRARIES = objcipc activator
 
 include $(THEOS_MAKE_PATH)/tweak.mk
