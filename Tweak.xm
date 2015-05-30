@@ -43,6 +43,15 @@ double hooked_nSpd;
                                                         NSLog(@"Got a message on springboard with value %g", [message[@"speed"] doubleValue]);
                                                         return nil;
                                                       }];
+
+
+  UIWindow *window = [[UIWindow alloc] initWithFrame:CGRectMake(270, 672, 60, 60)];
+  window.windowLevel = UIWindowLevelAlert + 2;
+  window.layer.cornerRadius = 30;
+  window.layer.borderWidth = 5;
+  window.layer.borderColor = [[UIColor redColor] CGColor];
+  [window setHidden:NO];
+  [window setBackgroundColor:[UIColor whiteColor]];
 }
 
 %end
