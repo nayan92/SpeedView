@@ -1,7 +1,6 @@
 #import <objcipc/objcipc.h>
 #import <libactivator/libactivator.h>
 
-
 @interface RootViewController : NSObject {
   double nSpd;
   float UOMfactor;
