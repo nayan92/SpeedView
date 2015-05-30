@@ -2,13 +2,10 @@
 
 @interface RootViewController : NSObject {
   double nSpd;
+  float UOMfactor;
 }
 - (void)locationManager:(id)arg1 didUpdateToLocation:(id)arg2 fromLocation:(id)arg3;
-- (void)averageSpeed;
-- (void)getServerVersion:(id)arg1;
 @end
-
-double hooked_nSpd;
 
 %hook RootViewController
 
@@ -17,11 +14,11 @@ double hooked_nSpd;
           fromLocation:(id)arg3 {
   %orig;
 
-  hooked_nSpd = MSHookIvar<double>(self, "nSpd");
-  NSLog(@"CamerAlert says speed is %g", hooked_nSpd);
-  NSLog(@"We got into method locationManager didUpdateToLocation from Location");
+  double hooked_nSpd = MSHookIvar<double>(self, "nSpd");
+  float hooked_UOMfactor = MSHookIvar<float>(self, "UOMfactor");
 
-  NSDictionary *msgDict = @{@"speed" : [NSNumber numberWithDouble:hooked_nSpd]};
+  int speed = (int) round(hooked_nSpd * hooked_UOMfactor);
+  NSDictionary *msgDict = @{@"speed" : [NSNumber numberWithInt:speed]};
 
   [OBJCIPC sendMessageToSpringBoardWithMessageName:@"com.nayan92.speedview.msg_speedupdate"
                                         dictionary:msgDict
@@ -35,16 +32,6 @@ double hooked_nSpd;
 -(void)applicationDidFinishLaunching:(id)application {
   %orig;
 
-  NSLog(@"Setup listener");
-
-  [OBJCIPC registerIncomingMessageHandlerForAppWithIdentifier:@"com.pocketgpsworld.CamerAlert"
-                                               andMessageName:@"com.nayan92.speedview.msg_speedupdate"
-                                                      handler:^NSDictionary *(NSDictionary *message) {
-                                                        NSLog(@"Got a message on springboard with value %g", [message[@"speed"] doubleValue]);
-                                                        return nil;
-                                                      }];
-
-
   UIWindow *window = [[UIWindow alloc] initWithFrame:CGRectMake(270, 672, 60, 60)];
   window.windowLevel = UIWindowLevelAlert + 2;
   window.layer.cornerRadius = 30;
@@ -52,6 +39,20 @@ double hooked_nSpd;
   window.layer.borderColor = [[UIColor redColor] CGColor];
   [window setHidden:NO];
   [window setBackgroundColor:[UIColor whiteColor]];
+
+  UILabel *speedLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
+  speedLabel.layer.cornerRadius = 30;
+  speedLabel.textAlignment = NSTextAlignmentCenter;
+  speedLabel.text = @"N/A";
+  [window addSubview:speedLabel];
+
+  [OBJCIPC registerIncomingMessageHandlerForAppWithIdentifier:@"com.pocketgpsworld.CamerAlert"
+                                               andMessageName:@"com.nayan92.speedview.msg_speedupdate"
+                                                      handler:^NSDictionary *(NSDictionary *message) {
+                                                        speedLabel.text = [message[@"speed"] stringValue];
+                                                        return nil;
+                                                      }];
+
 }
 
 %end
