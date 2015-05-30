@@ -1,4 +1,4 @@
-# cameralertwidget
+# SpeedView
 
 TODO
 ----
@@ -8,3 +8,4 @@ TODO
 - Some way of showing average speed when in SPECS zone
 - Open camerAlert app by tapping on speedometer
 - Fix rotation orientation
+- Add an icon
