@@ -2,7 +2,7 @@
 
 TODO
 ----
-- Make the speedometer draggable
+- Make the dragging like flinging (Similar to fb chat heads)
 - Change border color to red if speeding and green if below speed limit
 - Some way of notifying that camera is coming up
 - Open camerAlert app by tapping on speedometer

@@ -42,6 +42,8 @@
   UILabel *avgSpeedLabel;
   UIView *separator;
   BOOL inAveragingView;
+  float firstX;
+  float firstY;
 }
 @end
 
@@ -93,6 +95,12 @@
   [window setHidden:NO];
   [window setBackgroundColor:[UIColor whiteColor]];
 
+  window.userInteractionEnabled = YES;
+  UIPanGestureRecognizer *panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(moveAround:)];
+  [panRecognizer setMaximumNumberOfTouches:1];
+  [panRecognizer setMinimumNumberOfTouches:1];
+  [window addGestureRecognizer:panRecognizer];
+
   speedLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 60, 60)];
   speedLabel.textAlignment = NSTextAlignmentCenter;
   speedLabel.text = @"N/A";
@@ -107,6 +115,16 @@
   separator = [[UIView alloc] initWithFrame:CGRectMake(59, 10, 3, 0)];
   [separator setBackgroundColor:[UIColor blackColor]];
   [window addSubview:separator];
+}
+
+- (void)moveAround:(UIPanGestureRecognizer *)gesture {
+  if ([gesture state] == UIGestureRecognizerStateBegan) {
+    firstX = [window center].x;
+    firstY = [window center].y;
+  }
+
+  CGPoint translation = [gesture translationInView:window];
+  [window setCenter:CGPointMake(firstX + translation.x, firstY + translation.y)];
 }
 
 - (void)showAveragingView {
